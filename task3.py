@@ -1,4 +1,6 @@
 # Завдання 3
+# Реалізуйте алгоритм Дейкстри для знаходження найкоротшого шляху в розробленому графі: 
+# додайте у граф ваги до ребер та знайдіть найкоротший шлях між всіма вершинами графа.
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -6,37 +8,128 @@ import matplotlib.pyplot as plt
 # Створимо порожній граф
 G = nx.Graph()
 
-# Додамо вершини (станції метро)
-stations = {
-    "Червона лінія": ["Академмістечко", "Житомирська", "Святошин", "Нивки", "Берестейська", "Шулявська", "Політехнічний інститут", "Вокзальна", "Університет", "Театральна", "Хрещатик", "Арсенальна", "Дніпро", "Лівобережна", "Дарниця", "Чернігівська", "Лісова"],
-    "Синя лінія": ["Героїв Дніпра", "Мінська", "Оболонь", "Почайна", "Тараса Шевченка", "Контрактова площа", "Поштова площа", "Майдан Незалежності", "Площа Льва Толстого", "Олімпійська", "Палац Україна", "Либідська", "Деміївська", "Голосіївська", "Васильківська", "Виставковий центр", "Іподром", "Теремки"],
-    "Зелена лінія": ["Сирець", "Дорогожичі", "Лук'янівська", "Золоті ворота", "Палац спорту", "Кловська", "Печерська", "Дружби народів", "Видубичі", "Славутич", "Осокорки", "Позняки", "Харківська", "Вирлиця", "Бориспільська", "Червоний хутір"]
-}
+# Додамо вершини (туристичні місця)
+tourist_sites = ["Києво-Печерська Лавра", "Софійський собор", "Золоті ворота", "Майдан Незалежності", "Андріївський узвіз"]
 
-# Додамо вершини та ребра для кожної лінії метро з вагами
-for line, stops in stations.items():
-    G.add_nodes_from(stops)
-    G.add_edges_from([(stops[i], stops[i+1], {'weight': 1}) for i in range(len(stops) - 1)])
+# Додамо вершини до графа
+G.add_nodes_from(tourist_sites)
 
-# Додамо декілька перехідних ребер з вагами
-transfer_edges = [
-    ("Театральна", "Золоті ворота", 1),
-    ("Хрещатик", "Майдан Незалежності", 1),
-    ("Палац спорту", "Площа Льва Толстого", 1)
+# Додамо ребра (маршрути між туристичними місцями)
+# Відстані між туристичними місцями взяті умовно для прикладу
+edges = [
+    ("Києво-Печерська Лавра", "Софійський собор", 3),
+    ("Софійський собор", "Золоті ворота", 1),
+    ("Золоті ворота", "Майдан Незалежності", 1),
+    ("Майдан Незалежності", "Андріївський узвіз", 2),
+    ("Андріївський узвіз", "Києво-Печерська Лавра", 4),
+    ("Києво-Печерська Лавра", "Майдан Незалежності", 2),  # Додаткове ребро
+    ("Софійський собор", "Майдан Незалежності", 2)  # Додаткове ребро
 ]
-for u, v, w in transfer_edges:
+
+# Додаємо ребра до графа з вагами
+for u, v, w in edges:
     G.add_edge(u, v, weight=w)
 
 # Візуалізуємо граф
 pos = nx.spring_layout(G)  # Розташування вершин
-plt.figure(figsize=(15, 10))
-nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=2000, edge_color='gray', font_size=10)
+plt.figure(figsize=(10, 7))
+nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=3000, edge_color='gray', font_size=10, font_weight='bold')
 labels = nx.get_edge_attributes(G, 'weight')
 nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
-plt.title("Карта метро міста Київ з вагами ребер")
+plt.title("Транспортна мережа туристичних місць Києва")
+plt.savefig("graph1.png")  # Збереження зображення графа
 plt.show()
 
-# Алгоритм Дейкстри
+# Реалізація DFS (Depth-First Search)
+def dfs(graph, start, goal, path=None, visited=None):
+    if path is None:
+        path = []
+    if visited is None:
+        visited = set()
+    path.append(start)
+    visited.add(start)
+    if start == goal:
+        return path
+    for neighbor in graph[start]:
+        if neighbor not in visited:
+            result = dfs(graph, neighbor, goal, path.copy(), visited)
+            if result is not None:
+                return result
+    return None
+
+# Реалізація BFS (Breadth-First Search)
+def bfs(graph, start, goal):
+    queue = [(start, [start])]
+    visited = set()
+    while queue:
+        (vertex, path) = queue.pop(0)
+        if vertex not in visited:
+            if vertex == goal:
+                return path
+            visited.add(vertex)
+            for neighbor in graph[vertex]:
+                queue.append((neighbor, path + [neighbor]))
+    return None
+
+# Знаходимо шляхи за допомогою DFS та BFS
+start, goal = "Києво-Печерська Лавра", "Андріївський узвіз"
+path_dfs = dfs(G, start, goal)
+path_bfs = bfs(G, start, goal)
+
+print(f"Шлях від {start} до {goal} за допомогою DFS: {path_dfs}")
+print(f"Шлях від {start} до {goal} за допомогою BFS: {path_bfs}")
+
+# Пояснення результатів
+explanation = """
+Пояснення результатів:
+DFS (глибини пошуку) йде по глибоких шляхах до тих пір, поки не досягне цілі або не повернеться назад. 
+Це означає, що DFS може знайти шлях, який не є найкоротшим, особливо якщо в графі є кілька шляхів до цілі.
+BFS (ширини пошуку) йде по всіх сусідніх вершинах, перш ніж перейти на наступний рівень глибини, тому знаходить найкоротший шлях у графі.
+"""
+print(explanation)
+
+# Створення документа markdown
+readme_content = f"""
+# Порівняння алгоритмів DFS та BFS для знаходження шляхів у графі
+
+## Опис
+Цей документ містить порівняння алгоритмів DFS (глибини пошуку) та BFS (ширини пошуку) для знаходження шляхів у графі, що моделює транспортну мережу туристичних місць Києва.
+
+## Граф
+Мережа включає такі туристичні місця:
+1. Києво-Печерська Лавра
+2. Софійський собор
+3. Золоті ворота
+4. Майдан Незалежності
+5. Андріївський узвіз
+
+Графічне представлення мережі:
+
+![Граф](graph.png)
+
+## Результати пошуку
+
+### Шлях від "Києво-Печерська Лавра" до "Андріївський узвіз"
+
+#### DFS (глибини пошуку)
+- Шлях: {path_dfs}
+
+#### BFS (ширини пошуку)
+- Шлях: {path_bfs}
+
+## Пояснення результатів
+DFS (глибини пошуку) йде по глибоких шляхах до тих пір, поки не досягне цілі або не повернеться назад. Це означає, що DFS може знайти шлях, який не є найкоротшим, особливо якщо в графі є кілька шляхів до цілі.
+
+BFS (ширини пошуку) йде по всіх сусідніх вершинах, перш ніж перейти на наступний рівень глибини, тому знаходить найкоротший шлях у графі.
+
+## Висновки
+- **DFS** може знайти будь-який шлях до цілі, але не завжди найкоротший.
+- **BFS** завжди знаходить найкоротший шлях, якщо всі ребра мають однакову вагу.
+
+На основі отриманих результатів, алгоритм BFS краще підходить для знаходження найкоротшого шляху в графах з рівними вагами ребер.
+"""
+
+# Реалізація алгоритму Дейкстри
 def dijkstra(graph, start):
     shortest_paths = {start: (None, 0)}
     current_node = start
@@ -47,43 +140,45 @@ def dijkstra(graph, start):
         destinations = graph[current_node]
         weight_to_current_node = shortest_paths[current_node][1]
 
-        for next_node, data in destinations.items():
-            weight = data['weight'] + weight_to_current_node
+        for next_node in destinations:
+            weight = graph[current_node][next_node]['weight'] + weight_to_current_node
             if next_node not in shortest_paths:
                 shortest_paths[next_node] = (current_node, weight)
             else:
                 current_shortest_weight = shortest_paths[next_node][1]
                 if current_shortest_weight > weight:
                     shortest_paths[next_node] = (current_node, weight)
-        
+
         next_destinations = {node: shortest_paths[node] for node in shortest_paths if node not in visited}
         if not next_destinations:
             return shortest_paths
-        
+
         current_node = min(next_destinations, key=lambda k: next_destinations[k][1])
 
     return shortest_paths
 
-# Знаходимо найкоротші шляхи від Академмістечка до всіх інших станцій
-start_station = "Академмістечко"
-shortest_paths = dijkstra(G, start_station)
+# Знаходження найкоротших шляхів від кожної вершини до кожної іншої вершини
+shortest_paths_all = {}
+for node in G.nodes:
+    shortest_paths_all[node] = dijkstra(G, node)
 
-# Виводимо найкоротші шляхи та відстані
-for destination in shortest_paths:
-    path = []
-    node = destination
-    while node is not None:
-        path.append(node)
-        node = shortest_paths[node][0]
-    path = path[::-1]
-    print(f"Найкоротший шлях від {start_station} до {destination}: {' -> '.join(path)} з відстанню {shortest_paths[destination][1]}")
+# Оновлення markdown документа з результатами алгоритму Дейкстри
+readme_content += "\n## Найкоротші шляхи за алгоритмом Дейкстри\n"
 
-# Візуалізація графа з найкоротшими шляхами від Академмістечка
-plt.figure(figsize=(15, 10))
-nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=2000, edge_color='gray', font_size=10)
-nx.draw_networkx_nodes(G, pos, nodelist=[start_station], node_color='green', node_size=3000)
-nx.draw_networkx_edges(G, pos, edgelist=[(shortest_paths[node][0], node) for node in shortest_paths if shortest_paths[node][0] is not None], edge_color='red')
-labels = nx.get_edge_attributes(G, 'weight')
-nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
-plt.title("Найкоротші шляхи від Академмістечка")
-plt.show()
+for start_node, paths in shortest_paths_all.items():
+    readme_content += f"\n### Найкоротші шляхи від {start_node}:\n"
+    for end_node in paths:
+        path = []
+        current_node = end_node
+        while current_node is not None:
+            path.append(current_node)
+            next_node = paths[current_node][0]
+            current_node = next_node
+        path = path[::-1]
+        readme_content += f"- до {end_node}: {path} з вагою {paths[end_node][1]}\n"
+
+# Збереження оновленого документа markdown
+with open("README.md", "w", encoding="utf-8") as md_file:
+    md_file.write(readme_content)
+
+print("Документ README.md оновлено з результатами алгоритму Дейкстри")
